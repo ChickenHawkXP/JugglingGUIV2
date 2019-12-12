@@ -9,6 +9,16 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QMovie
+import mysql.connector
+import json
+
+with open ('config.json',"r") as info:
+    data = json.load(info)
+try:
+    database = mysql.connector.connect(host = data['host'],user=data['user'],password=data['password'],database = data['database'],auth_plugin=data['auth_plugin'])
+except mysql.connector.errors.DatabaseError as e:
+    print("Database is not online!")
+cursor = database.cursor()
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -97,6 +107,46 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+        self.add_to_pending.clicked.connect(self.add_pending)
+    def loadIncomplete(self):
+        cursor.execute('''SELECT *
+                          FROM trickslist
+                          WHERE trick_status = "INCOMPLETE"''')     
+        for i in cursor:
+            self.incomplete_list.addItem(i[0])
+        
+    def loadComplete(self):
+        cursor.execute('''SELECT *
+                          FROM trickslist
+                          WHERE trick_status = "COMPLETE"''')     
+        for i in cursor:
+            self.completed_list.addItem(i[0])
+    
+    def loadPending(self):
+        cursor.execute('''SELECT *
+                          FROM trickslist
+                          WHERE trick_status = "PENDING"''')     
+        for i in cursor:
+            self.pending_list.addItem(i[0])
+
+    def add_pending(self):
+        trick = self.incomplete_list.currentItem().text()
+        cursor.execute('''UPDATE trickslist
+                          SET trick_status = "PENDING"
+                          WHERE tricks = "%s"''' %trick)
+        print(trick)
+        database.commit()
+        self.loadLists()
+    
+    def loadLists(self):
+        self.pending_list.clear()
+        self.incomplete_list.clear()
+        self.completed_list.clear()
+        self.loadComplete()
+        self.loadIncomplete()
+        self.loadPending()
+
+
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
@@ -117,5 +167,6 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
+    ui.loadLists()
     MainWindow.show()
     sys.exit(app.exec_())
