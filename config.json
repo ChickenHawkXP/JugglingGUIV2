@@ -1,0 +1,7 @@
+{
+    "host":"localhost",
+    "user":"root",
+    "password":"",
+    "database":"jugglingdb",
+    "auth_plugin":"mysql_native_password"
+}
